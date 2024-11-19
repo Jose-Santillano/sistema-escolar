@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Label, TextInput, Button, Card, Table } from "flowbite-react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -7,12 +7,16 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 
 const Grades = () => {
+  // URL de la API
+  const API_URL = import.meta.env.VITE_GRADE_URL;
+  const API_URL_STUDENT = import.meta.env.VITE_STUDENT_URL;
+
   const navigate = useNavigate();
 
   const [matricula, setMatricula] = useState("");
-  const [calificacionFundamental, setCalificacionFundamental] = useState("");
-  const [calificacionOrdinario, setCalificacionOrdinario] = useState("");
-  const [calificacionMedioCurso, setCalificacionMedioCurso] = useState("");
+  const [fundamental, setCalificacionFundamental] = useState("");
+  const [ordinario, setCalificacionOrdinario] = useState("");
+  const [medioCurso, setCalificacionMedioCurso] = useState("");
   const [grupo, setGrupo] = useState("");
   const [materia, setMateria] = useState("");
   const [grades, setGrades] = useState([]);
@@ -21,32 +25,77 @@ const Grades = () => {
     ordinario: 0.3,
     medioCurso: 0.3,
   });
+  
+  // Nombre y correo del estudiante
+  const [name, setName] = useState({});
+  const [email, setEmail] = useState("");
+
+  // Cargar las calificaciones al cargar la página
+  useEffect(() => {
+    getGrades();
+  }, []);
+
+  // Función para obtener las calificaciones
+  const getGrades = () => {
+    fetch(API_URL)
+      .then((response) => response.json())
+      .then((data) => {
+        setGrades(data);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  };
 
   const handleRegisterGrades = (e) => {
     e.preventDefault();
     const average =
-      calificacionFundamental * weights.fundamental +
-      calificacionOrdinario * weights.ordinario +
-      calificacionMedioCurso * weights.medioCurso;
+      fundamental * weights.fundamental +
+      ordinario * weights.ordinario +
+      medioCurso * weights.medioCurso;
 
     const newGrade = {
       matricula,
-      calificacionFundamental,
-      calificacionOrdinario,
-      calificacionMedioCurso,
+      fundamental,
+      ordinario,
+      medioCurso,
       grupo,
       materia,
       promedio: average.toFixed(2),
     };
 
-    setGrades([...grades, newGrade]);
+    //setGrades([...grades, newGrade]);
 
-    Swal.fire({
-      icon: "success",
-      title: "Calificaciones Registradas",
-      text: `Promedio calculado: ${average.toFixed(2)}`,
-      confirmButtonText: "Aceptar",
-    });
+    // Registramos la calificación en el backend
+    fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newGrade),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if(!data.message) {
+          Swal.fire({
+            icon: "success",
+            title: "Calificación registrada",
+            text: `Matrícula: ${data.matricula}`,
+            confirmButtonText: "Aceptar",
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: data.message,
+            confirmButtonText: "Aceptar",
+          });
+        }
+        getGrades();
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
 
     // Resetear campos
     setMatricula("");
@@ -60,59 +109,79 @@ const Grades = () => {
   // Función para retroalimentar a un alumno y enviar un mensaje, y enviar un correo electrónico
   const retroalimentar = (index) => {
     const grade = grades[index];
-    console.log(grade);
-    Swal.fire({
-      title: `Retroalimentación para el alumno ${grade.matricula}`,
-      input: "textarea",
-      inputLabel: "Mensaje",
-      inputPlaceholder: "Escribe tu retroalimentación aquí...",
-      showCancelButton: true,
-      confirmButtonText: "Enviar",
-      cancelButtonText: "Cancelar",
-    }).then((result) => {
-      if (result.isConfirmed) {
+
+    // Obtener el nombre y correo del estudiante
+    fetch(API_URL_STUDENT + `/${grade.matricula}`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        setName(data.nombre);
+        setEmail(data.correo);
+
         // Enviar correo electrónico
         Swal.fire({
-          icon: "success",
-          title: "Enviando retroalimentación...",
-          text: `Mensaje: ${result.value}`,
-          confirmButtonText: "Aceptar",
+          title: `Retroalimentación para el alumno ${grade.matricula}`,
+          input: "textarea",
+          inputLabel: "Mensaje",
+          inputPlaceholder: "Escribe tu retroalimentación aquí...",
+          showCancelButton: true,
+          confirmButtonText: "Enviar",
+          cancelButtonText: "Cancelar",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Enviar correo electrónico
+            Swal.fire({
+              icon: "success",
+              title: "Enviando retroalimentación...",
+              text: `Mensaje: ${result.value}`,
+              confirmButtonText: "Aceptar",
+            });
+    
+            // Nombre, Matricula, fundamental, ordinario, medio curso, promedio
+    
+            let student = {
+              nombre: name,
+              correo: email,
+            };
+            console.log(student);
+
+            // Extraemos calificaciones del index
+            let grade = grades[index];
+    
+            let structureGrade = `
+              Nombre: ${student.nombre}
+              Matrícula: ${grade.matricula}
+    
+              Calificaciones finales (${grade.materia}) \n
+              -------------------------------------
+              | Tipo de Evaluación
+              -------------------------------------
+              | ° Fundamental (${grade.fundamental})
+              | ° Ordinario (${grade.ordinario})
+              | ° Medio Curso (${grade.medioCurso})
+              -------------------------------------
+              | Promedio: ${grade.promedio}
+              _____________________________________
+              | Retroalimentación: ${result.value}
+              _____________________________________
+              | Calificaciones generadas por Sistema FR. (2024)
+              -------------------------------------
+              `;
+    
+            let mailtoLink = `mailto:${
+              student.correo
+            }?subject=Retroalimentación&body=${encodeURIComponent(structureGrade)}`;
+    
+            window.open(mailtoLink);
+          }
         });
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
 
-        // Nombre, Matricula, fundamental, ordinario, medio curso, promedio
 
-        let student = {
-          nombre: "Nombre del Alumno",
-          correo: "santillano7479@gmail.com",
-        };
-
-        let structureGrade = `
-          Nombre: ${student.nombre}
-          Matrícula: ${grade.matricula}
-
-          Calificaciones finales (${grade.materia}) \n
-          -------------------------------------
-          | Tipo de Evaluación
-          -------------------------------------
-          | ° Fundamental (${grade.calificacionFundamental})
-          | ° Ordinario (${grade.calificacionOrdinario})
-          | ° Medio Curso (${grade.calificacionMedioCurso})
-          -------------------------------------
-          | Promedio: ${grade.promedio}
-          _____________________________________
-          | Retroalimentación: ${result.value}
-          _____________________________________
-          | Calificaciones generadas por Sistema FR. (2024)
-          -------------------------------------
-          `;
-
-        let mailtoLink = `mailto:${
-          student.correo
-        }?subject=Retroalimentación&body=${encodeURIComponent(structureGrade)}`;
-
-        window.open(mailtoLink);
-      }
-    });
+    
   };
 
   const handleWeightsChange = (field, value) => {
@@ -158,7 +227,7 @@ const Grades = () => {
             id="calificacionFundamental"
             type="number"
             placeholder="Calificación Fundamental"
-            value={calificacionFundamental}
+            value={fundamental}
             onChange={(e) => setCalificacionFundamental(e.target.value)}
             required
           />
@@ -170,7 +239,7 @@ const Grades = () => {
             id="calificacionOrdinario"
             type="number"
             placeholder="Calificación Ordinario"
-            value={calificacionOrdinario}
+            value={ordinario}
             onChange={(e) => setCalificacionOrdinario(e.target.value)}
             required
           />
@@ -182,7 +251,7 @@ const Grades = () => {
             id="calificacionMedioCurso"
             type="number"
             placeholder="Calificación Medio Curso"
-            value={calificacionMedioCurso}
+            value={medioCurso}
             onChange={(e) => setCalificacionMedioCurso(e.target.value)}
             required
           />
@@ -281,9 +350,9 @@ const Grades = () => {
                     <Table.Row key={index}>
                       <Table.Cell>{grade.matricula}</Table.Cell>
                       <Table.Cell>{grade.materia}</Table.Cell>
-                      <Table.Cell>{grade.calificacionFundamental}</Table.Cell>
-                      <Table.Cell>{grade.calificacionOrdinario}</Table.Cell>
-                      <Table.Cell>{grade.calificacionMedioCurso}</Table.Cell>
+                      <Table.Cell>{grade.fundamental}</Table.Cell>
+                      <Table.Cell>{grade.ordinario}</Table.Cell>
+                      <Table.Cell>{grade.medioCurso}</Table.Cell>
                       <Table.Cell>{grade.promedio}</Table.Cell>
                       <Table.Cell>
                         <Button

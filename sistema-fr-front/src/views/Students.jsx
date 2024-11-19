@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Label, TextInput, Button, Card, Table } from "flowbite-react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,32 @@ const Students = () => {
 
   const navigate = useNavigate();
 
+  // URL de la API
+  const API_URL = import.meta.env.VITE_STUDENT_URL;
+
+  // Obtener todos los estudiantes al cargar la página
+  useEffect(() => {
+    getStudents();
+  }, []);
+
+  // Obtener todos los estudiantes
+  const getStudents = () => {
+    fetch(API_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Error al obtener los estudiantes");
+        }
+        return response.json(); // Asegúrate de convertir la respuesta a JSON
+      })
+      .then((data) => setStudents(data))
+      .catch((error) => console.error(error));
+  };
+
   // Validar y registrar un nuevo estudiante
   const handleRegister = (e) => {
     e.preventDefault();
@@ -32,27 +58,68 @@ const Students = () => {
 
     if (editingIndex !== null) {
       // Editar estudiante existente
-      const updatedStudents = students.map((student, index) =>
-        index === editingIndex
-          ? { matricula, nombre, carrera, correo }
-          : student
-      );
-      setStudents(updatedStudents);
-      Swal.fire({
-        icon: "success",
-        title: "Edición Exitosa",
-        text: `Estudiante ${nombre} actualizado correctamente.`,
-        confirmButtonColor: "#3b82f6",
-      });
+
+      // Obtener la matrícula del estudiante a editar
+      const student = students[editingIndex];
+      const matricula = student.matricula;
+
+      fetch(`${API_URL}/${matricula}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ nombre, carrera, correo }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Error al actualizar el estudiante");
+          }
+          Swal.fire({
+            icon: "success",
+            title: "Edición Exitosa",
+            text: `Estudiante ${nombre} actualizado correctamente.`,
+            confirmButtonColor: "#3b82f6",
+          });
+          getStudents();
+        })
+        .catch((error) => console.error(error));
     } else {
-      // Agregar nuevo estudiante
-      setStudents([...students, { matricula, nombre, carrera, correo }]);
-      Swal.fire({
-        icon: "success",
-        title: "Registro Exitoso",
-        text: `Estudiante ${nombre} registrado correctamente.`,
-        confirmButtonColor: "#3b82f6",
-      });
+      // Agregar nuevo estudiante a la base de datos
+      fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ matricula, nombre, carrera, correo }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            // Mostramos el error que viene del backend de message
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text:
+                response.status === 400
+                  ? "La matrícula ya está registrada."
+                  : "Error al registrar el estudiante.",
+              confirmButtonColor: "#3b82f6",
+            });
+            throw new Error("Error al registrar el estudiante");
+          }
+
+          Swal.fire({
+            icon: "success",
+            title: "Registro Exitoso",
+            text: `Estudiante ${nombre} registrado correctamente.`,
+            confirmButtonColor: "#3b82f6",
+          });
+
+          // Obtener todos los estudiantes
+          getStudents();
+
+          return response.json();
+        })
+        .catch((error) => console.error(error));
     }
 
     // Limpiar campos
@@ -64,7 +131,7 @@ const Students = () => {
   };
 
   // Preparar para editar un estudiante
-  const handleEdit = (index) => {
+  const modeEdit = (index) => {
     const student = students[index];
     setMatricula(student.matricula);
     setNombre(student.nombre);
@@ -86,12 +153,28 @@ const Students = () => {
       cancelButtonText: "Cancelar",
     }).then((result) => {
       if (result.isConfirmed) {
-        setStudents(students.filter((_, i) => i !== index));
-        Swal.fire({
-          icon: "success",
-          title: "Eliminado",
-          text: "El estudiante ha sido eliminado.",
-          confirmButtonColor: "#3b82f6",
+        // Obtener la matrícula del estudiante a eliminar
+        
+        const matricula = index;
+
+        fetch(`${API_URL}/${matricula}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).then((response) => {
+          if (!response.ok) {
+            throw new Error("Error al eliminar el estudiante");
+          }
+
+          Swal.fire({
+            icon: "success",
+            title: "Eliminado",
+            text: "El estudiante ha sido eliminado.",
+            confirmButtonColor: "#3b82f6",
+          });
+
+          getStudents();
         });
       }
     });
@@ -187,14 +270,14 @@ const Students = () => {
                     <Table.Cell>
                       <div className="flex">
                         <Button
-                          onClick={() => editGrade(grade.id)}
+                          onClick={() => modeEdit(index)}
                           color="light"
                           className="mr-2"
                         >
                           Editar
                         </Button>
                         <Button
-                          onClick={() => deleteGrade(grade.id)}
+                          onClick={() => handleDelete(student.matricula)}
                           color="failure"
                           className="mr-2"
                         >

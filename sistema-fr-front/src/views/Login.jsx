@@ -10,11 +10,18 @@ const Login = () => {
   const [matricula, setMatricula] = useState("");
   const [password, setPassword] = useState("");
 
+  // Credenciales de inicio de sesión
+  const envUser = import.meta.env.VITE_LOGIN_USER;
+  const envPassword = import.meta.env.VITE_PASSWORD_USER;
+
   // Navegación
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
+
+    console.log("envUser", envUser);
+    console.log("envPassword", envPassword);
 
     // Validación de matrícula (7 números) y contraseña (mínimo 8 caracteres)
     const matriculaRegex = /^\d{7}$/;
@@ -34,7 +41,7 @@ const Login = () => {
         confirmButtonText: "Reintentar",
         confirmButtonColor: "#3b82f6",
       });
-    } else if (matricula === "2012345" && password === "12345678") {
+    } else if (matricula === envUser && password === envPassword) {
       Swal.fire({
         icon: "success",
         title: "¡Bienvenido!",

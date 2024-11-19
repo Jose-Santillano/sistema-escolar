@@ -80,7 +80,7 @@ const Grades = () => {
           Swal.fire({
             icon: "success",
             title: "Calificación registrada",
-            text: `Matrícula: ${data.matricula}`,
+            text: `Se ha registrado satisfactoriamente`,
             confirmButtonText: "Aceptar",
           });
         } else {

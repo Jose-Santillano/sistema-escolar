@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Table } from "flowbite-react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -7,55 +7,20 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 
 const Tables = () => {
+
+  const API_URL = import.meta.env.VITE_GRADE_URL;
+
   const navigate = useNavigate();
 
   // Datos simulados de ejemplo
-  const [grades, setGrades] = useState([
-    {
-      id: 1,
-      nombre: "Juan Pérez",
-      matricula: "2012345",
-      materia: "Matemáticas",
-      fundamental: 8.5,
-      ordinario: 9,
-      medioCurso: 7.8,
-      promedio: 8.43,
-      subido: false,
-    },
-    {
-      id: 2,
-      nombre: "Ana López",
-      matricula: "2016789",
-      materia: "Física",
-      fundamental: 9.2,
-      ordinario: 8.8,
-      medioCurso: 8.5,
-      promedio: 8.83,
-      subido: false,
-    },
-    {
-      id: 2,
-      nombre: "Ana López",
-      matricula: "2016789",
-      materia: "Física",
-      fundamental: 9.2,
-      ordinario: 8.8,
-      medioCurso: 8.5,
-      promedio: 8.83,
-      subido: false,
-    },
-    {
-      id: 2,
-      nombre: "Ana López",
-      matricula: "2016789",
-      materia: "Física",
-      fundamental: 9.2,
-      ordinario: 8.8,
-      medioCurso: 8.5,
-      promedio: 8.83,
-      subido: false,
-    },
-  ]);
+  const [grades, setGrades] = useState([]);
+
+  // Obtener datos de la API
+  useEffect(() => {
+    fetch(API_URL)
+      .then((response) => response.json())
+      .then((data) => setGrades(data));
+  }, []);
 
   // Función para subir todas las calificaciones a SFR (simulación)
   const uploadAllGrades = () => {
@@ -90,21 +55,6 @@ const Tables = () => {
     Swal.fire("¡Subido!", "Calificación subida al sistema.", "success");
   };
 
-  // Función para eliminar un registro
-  const deleteGrade = (id) => {
-    setGrades((prevGrades) => prevGrades.filter((grade) => grade.id !== id));
-    Swal.fire("Eliminado", "El registro ha sido eliminado.", "success");
-  };
-
-  // Función para editar un registro (simulación)
-  const editGrade = (id) => {
-    Swal.fire(
-      "Edición no implementada",
-      "Esta funcionalidad es un placeholder.",
-      "info"
-    );
-  };
-
   return (
     <div className="bg-gray-100 h-screen p-5 flex flex-col items-center justify-center">
       <div className="bg-white shadow-lg rounded-lg p-5">
@@ -131,7 +81,6 @@ const Tables = () => {
         <div className="overflow-y-auto h-96">
           <Table hoverable striped>
             <Table.Head>
-              <Table.HeadCell>Nombre</Table.HeadCell>
               <Table.HeadCell>Matrícula</Table.HeadCell>
               <Table.HeadCell>Materia</Table.HeadCell>
               <Table.HeadCell>Fundamental</Table.HeadCell>
@@ -143,7 +92,6 @@ const Tables = () => {
             <Table.Body className="divide-y">
               {grades.map((grade) => (
                 <Table.Row key={grade.id} className="hover:bg-gray-100">
-                  <Table.Cell>{grade.nombre}</Table.Cell>
                   <Table.Cell>{grade.matricula}</Table.Cell>
                   <Table.Cell>{grade.materia}</Table.Cell>
                   <Table.Cell>{grade.fundamental}</Table.Cell>

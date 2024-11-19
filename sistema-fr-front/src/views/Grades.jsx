@@ -25,10 +25,6 @@ const Grades = () => {
     ordinario: 0.3,
     medioCurso: 0.3,
   });
-  
-  // Nombre y correo del estudiante
-  const [name, setName] = useState({});
-  const [email, setEmail] = useState("");
 
   // Cargar las calificaciones al cargar la página
   useEffect(() => {
@@ -76,7 +72,7 @@ const Grades = () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        if(!data.message) {
+        if (!data.message) {
           Swal.fire({
             icon: "success",
             title: "Calificación registrada",
@@ -115,10 +111,12 @@ const Grades = () => {
       .then((response) => response.json())
       .then((data) => {
         console.log(data);
-        setName(data.nombre);
-        setEmail(data.correo);
 
-        // Enviar correo electrónico
+        // Verifica que 'nombre' y 'correo' estén disponibles en 'data'
+        const nombre = data.nombre || "Nombre no disponible";
+        const correo = data.correo || "Correo no disponible";
+
+        // Mostrar la ventana de retroalimentación
         Swal.fire({
           title: `Retroalimentación para el alumno ${grade.matricula}`,
           input: "textarea",
@@ -129,29 +127,18 @@ const Grades = () => {
           cancelButtonText: "Cancelar",
         }).then((result) => {
           if (result.isConfirmed) {
-            // Enviar correo electrónico
             Swal.fire({
               icon: "success",
               title: "Enviando retroalimentación...",
               text: `Mensaje: ${result.value}`,
               confirmButtonText: "Aceptar",
             });
-    
-            // Nombre, Matricula, fundamental, ordinario, medio curso, promedio
-    
-            let student = {
-              nombre: name,
-              correo: email,
-            };
-            console.log(student);
 
-            // Extraemos calificaciones del index
-            let grade = grades[index];
-    
-            let structureGrade = `
-              Nombre: ${student.nombre}
+            // Crear estructura del mensaje
+            const structureGrade = `
+              Nombre: ${nombre}
               Matrícula: ${grade.matricula}
-    
+  
               Calificaciones finales (${grade.materia}) \n
               -------------------------------------
               | Tipo de Evaluación
@@ -166,12 +153,13 @@ const Grades = () => {
               _____________________________________
               | Calificaciones generadas por Sistema FR. (2024)
               -------------------------------------
-              `;
-    
-            let mailtoLink = `mailto:${
-              student.correo
-            }?subject=Retroalimentación&body=${encodeURIComponent(structureGrade)}`;
-    
+            `;
+
+            // Enlace de correo
+            const mailtoLink = `mailto:${correo}?subject=Retroalimentación&body=${encodeURIComponent(
+              structureGrade
+            )}`;
+
             window.open(mailtoLink);
           }
         });
@@ -179,9 +167,6 @@ const Grades = () => {
       .catch((error) => {
         console.error("Error:", error);
       });
-
-
-    
   };
 
   const handleWeightsChange = (field, value) => {
@@ -334,7 +319,7 @@ const Grades = () => {
             Calificaciones Registradas
           </h2>
           <div className="overflow-x-auto overflow-y-auto h-48">
-            <Table>
+            <Table striped>
               <Table.Head>
                 <Table.HeadCell>Matrícula</Table.HeadCell>
                 <Table.HeadCell>Materia</Table.HeadCell>
@@ -367,12 +352,11 @@ const Grades = () => {
                   ))
                 ) : (
                   <Table.Row>
-                    <Table.Cell colSpan="5" className="text-center">
+                    <Table.Cell colSpan="7" className="text-center">
                       No hay calificaciones registradas.
                     </Table.Cell>
                   </Table.Row>
                 )}
-                <div className="overflow-y-auto h-48"></div>
               </Table.Body>
             </Table>
           </div>

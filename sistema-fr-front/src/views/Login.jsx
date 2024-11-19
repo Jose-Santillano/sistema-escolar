@@ -11,8 +11,8 @@ const Login = () => {
   const [password, setPassword] = useState("");
 
   // Credenciales de inicio de sesión
-  const envUser = import.meta.env.VITE_LOGIN_USER;
-  const envPassword = import.meta.env.VITE_PASSWORD_USER;
+  const envUser = import.meta.env.VITE_LOGIN_USER || "1234567";
+  const envPassword = import.meta.env.VITE_PASSWORD_USER || "12345678";
 
   // Navegación
   const navigate = useNavigate();
